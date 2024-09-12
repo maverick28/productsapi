@@ -1,0 +1,17 @@
+services:
+  mysql:
+    image: mysql/mysql-server:8.0
+    restart: always
+    environment:
+      - MYSQL_DATABASE=productsapi
+      - MYSQL_ROOT_PASSWORD=pase14792
+      - MYSQL_USER=root
+      - MYSQL_PASSWORD=pase14792
+    ports:
+      - "14792:3306"
+    volumes:
+      - mysqlDocker:/var/lib/mysql
+volumes:
+  mysqlDocker:
+    external:
+      name: mysqlDocker
