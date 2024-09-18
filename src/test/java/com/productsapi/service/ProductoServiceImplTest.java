@@ -20,7 +20,6 @@ import com.productsapi.model.Producto;
 import com.productsapi.repositories.ProductoRepository;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -107,7 +106,6 @@ public class ProductoServiceImplTest {
 	@Test
 	void testUpdate_ExistingProduct_ReturnsSuccessMessage() {
 		ProductoDTO productoDTO = new ProductoDTO();
-		productoDTO.setId(1);
 		productoDTO.setNombre("UpdatedProduct");
 		Producto producto = new Producto();
 		producto.setId(1);
@@ -123,7 +121,6 @@ public class ProductoServiceImplTest {
 	@Test
 	void testUpdate_NonExistingProduct_ReturnsErrorMessage() {
 		ProductoDTO productoDTO = new ProductoDTO();
-		productoDTO.setId(1);
 		productoDTO.setNombre("UpdatedProduct");
 
 		when(productoRepository.existsById(1L)).thenReturn(false);

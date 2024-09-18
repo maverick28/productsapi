@@ -1,20 +1,18 @@
 package com.productsapi.service;
 
 import java.util.List;
-import java.util.Optional;
 
 import com.productsapi.dto.ProductoDTO;
-import com.productsapi.model.Producto;
 
 public interface ProductoService {
 	
-	Optional<Producto> get(Integer id);
+	ProductoDTO get(Integer id);
 	    
-	List<Producto> getAllPaged(int page, int size);
+	List<ProductoDTO> getAllPaged(int page, int size);
 	
-	String create(ProductoDTO productoDTO);
+	ProductoDTO create(ProductoDTO productoDTO);
 	
-    String update(ProductoDTO productoDTO);
+	ProductoDTO update(ProductoDTO productoDTO);
     
-    String delete(Integer id);
+    void delete(Integer id);
 }

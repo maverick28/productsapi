@@ -1,7 +1,7 @@
 package com.productsapi.service;
 
 import java.util.List;
-import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.modelmapper.ModelMapper;
 import org.modelmapper.convention.MatchingStrategies;
@@ -11,6 +11,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import com.productsapi.dto.ProductoDTO;
+import com.productsapi.exception.DuplicateProductNameException;
+import com.productsapi.exception.NoProductNameException;
+import com.productsapi.exception.NotFoundProductException;
 import com.productsapi.model.Producto;
 import com.productsapi.repositories.ProductoRepository;
 
@@ -21,64 +24,63 @@ public class ProductoServiceImpl implements ProductoService {
 	ProductoRepository productoRepository;
 
 	@Override
-	public Optional<Producto> get(Integer id) {
-		if(id==null || id<=0)
-			return Optional.empty();
+	public ProductoDTO get(Integer id) throws NotFoundProductException {
+		if (id == null || id <= 0)
+			throw new NotFoundProductException("El producto no existe");
 		else
-			return productoRepository.findById(id.longValue());
+			return new ProductoDTO(productoRepository.findById(id.longValue()));
 	}
 
 	@Override
-	public List<Producto> getAllPaged(int page, int size) {
-		return productoRepository.findAll(PageRequest.of(page, size)).getContent();
+	public List<ProductoDTO> getAllPaged(int page, int size) {
+		List<Producto> listaProducto = productoRepository.findAll(PageRequest.of(page, size)).getContent();
+		return listaProducto.stream().map(p -> new ProductoDTO(p)).collect(Collectors.toList());
 	}
 
 	@Override
-	public String create(ProductoDTO productoDTO) {
+	public ProductoDTO create(ProductoDTO productoDTO) throws NoProductNameException, DuplicateProductNameException {
+		if (productoDTO.getNombre() == null || productoDTO.getNombre().isBlank())
+			throw new NoProductNameException("No se puede guardar un producto sin nombre");
 		ModelMapper modelMapper = new ModelMapper();
 		modelMapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
 		Producto productoEntity = modelMapper.map(productoDTO, Producto.class);
-		if (productoDTO.getNombre() == null || productoDTO.getNombre().isBlank())
-			return "No se puede guardar un producto sin nombre";
+		ProductoDTO returnProdDTO = new ProductoDTO();
 		try {
-			productoRepository.save(productoEntity);
+			returnProdDTO = new ProductoDTO(productoRepository.save(productoEntity));
 		} catch (DataIntegrityViolationException e) {
 			if (e.getMessage().contains("Duplicate entry"))
-				return "No se puede guardar mas de un producto con el mismo nombre";
-			else
-				return "ERROR desconocido";
+				throw new DuplicateProductNameException("No se puede guardar mas de un producto con el mismo nombre");
 		}
-		return "Producto " + productoEntity.getNombre() + " creado";
+		return returnProdDTO;
 	}
 
 	@Override
-	public String update(ProductoDTO productoDTO) {
+	public ProductoDTO update(ProductoDTO productoDTO)
+			throws NotFoundProductException, NoProductNameException, DuplicateProductNameException {
+		if (productoDTO.getNombre() == null || productoDTO.getNombre().isBlank())
+			throw new NoProductNameException("No se puede guardar un producto sin nombre");
 		ModelMapper modelMapper = new ModelMapper();
 		modelMapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
 		Producto productoEntity = modelMapper.map(productoDTO, Producto.class);
-		if (productoDTO.getNombre() == null || productoDTO.getNombre().isBlank())
-			return "No se puede guardar un producto sin nombre";
+		ProductoDTO returnProdDTO = new ProductoDTO();
 		try {
-			if(!productoRepository.existsById(productoEntity.getId().longValue()))
-				return "El producto no existe";
+			if (!productoRepository.existsById(productoEntity.getId().longValue()))
+				throw new NotFoundProductException("El producto no existe");
 			else
-				productoRepository.save(productoEntity);
+				returnProdDTO = new ProductoDTO(productoRepository.save(productoEntity));
 		} catch (DataIntegrityViolationException e) {
 			if (e.getMessage().contains("Duplicate entry"))
-				return "No se puede guardar mas de un producto con el mismo nombre";
-			else
-				return "ERROR desconocido";
+				throw new DuplicateProductNameException("No se puede guardar mas de un producto con el mismo nombre");
 		}
-		return "Producto " + productoEntity.getNombre() + " actualizado";
+		return returnProdDTO;
 	}
 
 	@Override
-	public String delete(Integer id) {
-		if(!productoRepository.existsById(id.longValue()))
-			return "El producto no existe";
+	public void delete(Integer id) throws NotFoundProductException {
+		if (!productoRepository.existsById(id.longValue()))
+			throw new NotFoundProductException("El producto con ID " + id + " no existe");
 		else
 			productoRepository.deleteById(id.longValue());
-		return "Producto ID" + id + " eliminado";
 	}
 
-};
+}
