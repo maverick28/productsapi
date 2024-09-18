@@ -8,14 +8,18 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "Producto")
+@NoArgsConstructor
+@Getter
+@Setter
 public class Producto implements Serializable{
 	
 	private static final long serialVersionUID = 7022050908465628534L;
-
-	public Producto() {}
 	
 	public Producto (String nombre, Integer cantidad) {
 		this.nombre = nombre;
@@ -33,27 +37,4 @@ public class Producto implements Serializable{
 	@Column(name = "Cantidad", nullable = false)
 	private Integer cantidad = 0;
 
-	public Integer getId() {
-		return id;
-	}
-
-	public void setId(Integer id) {
-		this.id = id;
-	}
-
-	public String getNombre() {
-		return nombre;
-	}
-
-	public void setNombre(String nombre) {
-		this.nombre = nombre;
-	}
-
-	public Integer getCantidad() {
-		return cantidad;
-	}
-
-	public void setCantidad(Integer cantidad) {
-		this.cantidad = cantidad;
-	}
 }
