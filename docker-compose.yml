@@ -9,8 +9,23 @@ services:
       - MYSQL_PASSWORD=pase14792
     ports:
       - "14792:3306"
+    networks:
+      main:
+        aliases:
+          - mysql-dev
     volumes:
       - mysqlDocker:/var/lib/mysql
+  productsapi:
+    image: localhost:5000/productsapi:1.0.0
+    restart: always
+    ports:
+      - 8080:8080
+    networks:
+      main:
+        aliases:
+          - productsapi-back
+networks:
+  main:
 volumes:
   mysqlDocker:
     external:

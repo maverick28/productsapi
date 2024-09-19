@@ -1,29 +1,35 @@
 package com.productsapi.service;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-import org.junit.jupiter.api.BeforeEach;
+import java.nio.charset.Charset;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+import java.util.Random;
+
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.MockitoAnnotations;
-import org.modelmapper.ModelMapper;
-import org.modelmapper.convention.MatchingStrategies;
-import org.springframework.data.domain.Page;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
 import com.productsapi.dto.ProductoDTO;
+import com.productsapi.exception.DuplicateProductNameException;
+import com.productsapi.exception.NoProductNameException;
+import com.productsapi.exception.NotFoundProductException;
 import com.productsapi.model.Producto;
 import com.productsapi.repositories.ProductoRepository;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-
-public class ProductoServiceImplTest {
+@ExtendWith(MockitoExtension.class)
+class ProductoServiceImplTest {
 
 	@Mock
 	private ProductoRepository productoRepository;
@@ -31,120 +37,91 @@ public class ProductoServiceImplTest {
 	@InjectMocks
 	private ProductoServiceImpl productoService;
 
-	@BeforeEach
-	void setUp() {
-		MockitoAnnotations.openMocks(this);
-	}
-
 	@Test
-	void testGet_ValidId_ReturnsProduct() {
+	void testGet_Success() throws NotFoundProductException {
 		Producto producto = new Producto();
 		producto.setId(1);
+		ProductoDTO productoDTO = new ProductoDTO(producto);
 		when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
 
-		Optional<Producto> result = productoService.get(1);
+		ProductoDTO result = productoService.get(1);
 
-		assertTrue(result.isPresent());
-		assertEquals(producto, result.get());
+		assertEquals(productoDTO.getId(), result.getId());
+		verify(productoRepository).findById(1L);
 	}
 
 	@Test
-	void testGet_InvalidId_ReturnsEmpty() {
-		when(productoRepository.findById(anyLong())).thenReturn(Optional.empty());
-
-		Optional<Producto> result = productoService.get(-1);
-
-		assertFalse(result.isPresent());
+	void testGet_NotFound() {
+		assertThrows(NotFoundProductException.class, () -> productoService.get(0));
+		assertThrows(NotFoundProductException.class, () -> productoService.get(null));
 	}
 
 	@Test
-	void testGetAllPaged_ReturnsProductList() {
-		List<Producto> listProductos = new ArrayList<>();
-		listProductos.add(Mockito.mock(Producto.class));
-		listProductos.add(Mockito.mock(Producto.class));
-		listProductos.add(Mockito.mock(Producto.class));
-		listProductos.add(Mockito.mock(Producto.class));
-		listProductos.add(Mockito.mock(Producto.class));
-		
-		Page<Producto> pageProductos = new PageImpl<>(listProductos);
-
-		when(productoRepository.findAll(PageRequest.of(0, 10)))
-		.thenReturn(pageProductos);
-
-		List<Producto> result = productoService.getAllPaged(0, 10);
-
-		assertEquals(5, result.size());
-	}
-
-	@Test
-	void testCreate_ValidProductoDTO_ReturnsSuccessMessage() {
-		ProductoDTO productoDTO = new ProductoDTO();
-		productoDTO.setNombre("Product");
-		Producto producto = new Producto();
-
-		ModelMapper modelMapper = new ModelMapper();
-		modelMapper.getConfiguration().setMatchingStrategy(MatchingStrategies.STRICT);
-		when(productoRepository.save(any(Producto.class))).thenReturn(producto);
-		productoService = new ProductoServiceImpl();
-		productoService.productoRepository = productoRepository;
-
-		String result = productoService.create(productoDTO);
-
-		assertEquals("Producto Product creado", result);
-	}
-
-	@Test
-	void testCreate_InvalidProductoDTO_ReturnsErrorMessage() {
-		ProductoDTO productoDTO = new ProductoDTO();
-		productoDTO.setNombre(""); // Invalid name
-
-		String result = productoService.create(productoDTO);
-
-		assertEquals("No se puede guardar un producto sin nombre", result);
-	}
-
-	@Test
-	void testUpdate_ExistingProduct_ReturnsSuccessMessage() {
-		ProductoDTO productoDTO = new ProductoDTO();
-		productoDTO.setNombre("UpdatedProduct");
+	void testGetAllPaged() {
 		Producto producto = new Producto();
 		producto.setId(1);
+		when(productoRepository.findAll(PageRequest.of(0, 10))).thenReturn(new PageImpl<>(Arrays.asList(producto)));
 
+		List<ProductoDTO> result = productoService.getAllPaged(0, 10);
+
+		assertEquals(1, result.size());
+		verify(productoRepository).findAll(PageRequest.of(0, 10));
+	}
+
+	@Test
+	void testCreate_Success() throws NoProductNameException, DuplicateProductNameException {
+		ProductoDTO productoDTO = new ProductoDTO();
+		productoDTO.setNombre("Product A");
+		Producto producto = new Producto();
+		when(productoRepository.save(any(Producto.class))).thenReturn(producto);
+
+		ProductoDTO result = productoService.create(productoDTO);
+
+		assertNotNull(result);
+		verify(productoRepository).save(any(Producto.class));
+	}
+
+	@Test
+	void testCreate_NoProductName() {
+		ProductoDTO productoDTO = new ProductoDTO();
+		assertThrows(NoProductNameException.class, () -> productoService.create(productoDTO));
+	}
+
+	@Test
+	void testUpdate_Success() throws NotFoundProductException, NoProductNameException, DuplicateProductNameException {
+		ProductoDTO productoDTO = new ProductoDTO();
+		productoDTO.setId(1);
+		productoDTO.setNombre("Updated Product");
+		Producto producto = new Producto();
 		when(productoRepository.existsById(1L)).thenReturn(true);
 		when(productoRepository.save(any(Producto.class))).thenReturn(producto);
 
-		String result = productoService.update(productoDTO);
+		ProductoDTO result = productoService.update(productoDTO);
 
-		assertEquals("Producto UpdatedProduct actualizado", result);
+		assertNotNull(result);
+		verify(productoRepository).save(any(Producto.class));
 	}
 
 	@Test
-	void testUpdate_NonExistingProduct_ReturnsErrorMessage() {
+	void testUpdate_NotFound() {
 		ProductoDTO productoDTO = new ProductoDTO();
-		productoDTO.setNombre("UpdatedProduct");
-
-		when(productoRepository.existsById(1L)).thenReturn(false);
-
-		String result = productoService.update(productoDTO);
-
-		assertEquals("El producto no existe", result);
+		productoDTO.setId(0);
+		byte[] array = new byte[7];
+	    new Random().nextBytes(array);
+	    String randomNombre = new String(array, Charset.forName("UTF-8"));
+		productoDTO.setNombre(randomNombre);
+		assertThrows(NotFoundProductException.class, () -> productoService.update(productoDTO));
 	}
 
 	@Test
-	void testDelete_ExistingProduct_ReturnsSuccessMessage() {
+	void testDelete_Success() throws NotFoundProductException {
 		when(productoRepository.existsById(1L)).thenReturn(true);
-
-		String result = productoService.delete(1);
-
-		assertEquals("Producto ID1 eliminado", result);
+		productoService.delete(1);
+		verify(productoRepository).deleteById(1L);
 	}
 
 	@Test
-	void testDelete_NonExistingProduct_ReturnsErrorMessage() {
-		when(productoRepository.existsById(1L)).thenReturn(false);
-
-		String result = productoService.delete(1);
-
-		assertEquals("El producto no existe", result);
+	void testDelete_NotFound() {
+		assertThrows(NotFoundProductException.class, () -> productoService.delete(1));
 	}
 }
