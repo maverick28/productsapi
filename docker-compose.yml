@@ -16,8 +16,12 @@ services:
     volumes:
       - mysqlDocker:/var/lib/mysql
   productsapi:
-    image: localhost:5000/productsapi:1.0.0
+    image: productsapi:1.0.0
     restart: always
+    environment:
+      DB_URL: jdbc:mysql://mysql-dev:14792/productsapi?createDatabaseIfNotExist=true
+      DB_USER_NAME: root
+      DB_PASSWORD: pase14792
     ports:
       - 8080:8080
     networks:
