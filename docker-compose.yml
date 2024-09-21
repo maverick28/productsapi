@@ -1,5 +1,6 @@
 services:
   mysql:
+#    container_name: mysql_container
     image: mysql/mysql-server:8.0
     restart: always
     environment:
@@ -9,27 +10,39 @@ services:
       - MYSQL_PASSWORD=pase14792
     ports:
       - "14792:3306"
+    healthcheck:
+      test: "/usr/bin/mysql --user=root --password=pase14792 --execute \"SHOW DATABASES;\""
+      timeout: 20s
+      retries: 10
     networks:
-      main:
-        aliases:
-          - mysql-dev
+      - productsapi-network
     volumes:
       - mysqlDocker:/var/lib/mysql
+
   productsapi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+#    container_name: productsapi_container 
     image: productsapi:1.0.0
     restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+        restart: true
+    links:
+      - mysql
     environment:
-      DB_URL: jdbc:mysql://mysql-dev:14792/productsapi?createDatabaseIfNotExist=true
+      DB_URL: jdbc:mysql://mysql:14792/productsapi?createDatabaseIfNotExist=true
       DB_USER_NAME: root
       DB_PASSWORD: pase14792
     ports:
       - 8080:8080
     networks:
-      main:
-        aliases:
-          - productsapi-back
+      - productsapi-network
 networks:
-  main:
+    productsapi-network:
+      name: productsapi-network
 volumes:
   mysqlDocker:
     external:
